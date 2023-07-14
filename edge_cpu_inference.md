@@ -1,14 +1,31 @@
 ::: {.cell .markdown}
-# <CHI@Edge> : An Introduction {#chiedge--an-introduction}
+# Using edge devices for CPU-based inference
 
-**This notebook Covers:**
+:::
 
-1.  Getting Started
-    -   Creating a Lease
-    -   Launching 1st Container
-    -   Attaching a public IP
-    -   Transfering files `<br>`{=html}`</br>`{=html}
-2.  Creating an Image classification model using TFlite
+
+::: {.cell .markdown}
+
+Machine learning models are most often trained in the "cloud", on powerful centralized servers with specialized resources (like GPU acceleration) for training machine learning models. 
+
+
+However, for a variety of reasons including privacy, latency, and network connectivity or bandwidth constraints, it is often preferable to *use* these models (i.e. do inference) at "edge" devices located wherever the input data is/where the model's prediction is going to be used. 
+
+
+These edge devices are less powerful and typically lack any special acceleration, so the inference time (the time from when the input is fed to the model, until the model outputs its prediction) may not be as fast as it would be on a cloud server - but we avoid having to send the input data to the cloud and then sending the prediction back.
+
+:::
+
+::: {.cell .markdown}
+
+This notebook assumes you already have a "lease" available for a Raspberry Pi device on the CHI@Edge testbed. Then, it will show you how to:
+
+* launch a "container" on that device
+* attach an IP address to the container, so that you can access it over SSH
+* transfer files to and from the container
+* use a pre-trained image classification model to do inference on the edge device
+* delete the container
+
 :::
 
 ::: {.cell .markdown}
