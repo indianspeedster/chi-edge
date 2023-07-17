@@ -360,7 +360,7 @@ Also free up the IP that you we attached to the container, now that it is no lon
 
 ::: {.cell .code}
 ```python
-ip_details = chi.network.get_floating_ip(reserved_fip)
+ip_details = chi.network.get_floating_ip(public_ip)
 chi.neutron().delete_floatingip(ip_details["id"])
 ```
 :::
