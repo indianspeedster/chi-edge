@@ -29,11 +29,16 @@ This notebook assumes you already have a "lease" available for a Raspberry Pi de
 :::
 
 ::: {.cell .markdown}
-## Getting Started
+## Launch a container on an edge device
+
+We will start by preparing our environment in this notebook, then launching a container on an edge device using our pre-existing lease.
+
 :::
 
 ::: {.cell .markdown}
-### Loading the Required Libraries
+
+First, we load some required libraries:
+
 :::
 
 ::: {.cell .code}
@@ -47,103 +52,102 @@ import os
 :::
 
 ::: {.cell .markdown}
-### Setting up some of the environment variables
+
+We indicate that we're going to use the CHI@Edge site. We also need to specify the name of the Chameleon "project" that this experiment is part of. The project name will have the format "CHI-XXXXXX", where the last part is a 6-digit number, and you can find it on your [user dashboard](https://chameleoncloud.org/user/dashboard/).
+
+In the cell below, replace the project ID with your *own* project ID, then run the cell.
+
 :::
 
 ::: {.cell .code}
 ``` python
-# Before we go any further, we need to select which Chameleon site we will be using.
 chi.use_site("CHI@Edge")
-#You can find your project ID on the user dashboard here: https://chameleoncloud.org/user/dashboard/
-chi.set("project_name", "CHI-231095")
-```
-
-::: {.output .stream .stdout}
-    Now using CHI@Edge:
-    URL: https://chi.edge.chameleoncloud.org
-    Location: University of Chicago, Chicago, Illinois, USA
-    Support contact: help@chameleoncloud.org
-:::
-:::
-
-::: {.cell .markdown}
-### Creating a lease for the edge device
-
-View the host calendar to check availability <https://chi.edge.chameleoncloud.org/project/leases/calendar/device/>
-:::
-
-::: {.cell .code}
-``` python
-# get your username, this will be used to make the lease identifiable for you.
-username = os.environ.get("USER")
-
-# machine name refers to the "type" of device
-device_name = "iot-rpi-cm4-02"
-
-# these are start and end dates for the lease
-start_date, end_date = lease.lease_duration(days=2)
-exp_start_time = datetime.datetime.now().strftime("%Y%_m_%d_%H_%M_%S")
-
-lease_name = f"{username}-{device_name}-{exp_start_time}"
-
-reservations = []
-lease.add_device_reservation(reservations, count=1, device_name = device_name )
-container_lease = lease.create_lease(lease_name, reservations)
-lease_id = container_lease["id"]
-
-print(f"Reservation made with name {lease_name} and uuid {lease_id}")
-print("waiting for lease to start. This usually takes close to a minute.")
-lease.wait_for_active(lease_id)
-print("Lease successfully created")
+chi.set("project_name", "CHI-XXXXXX")
 ```
 :::
 
 ::: {.cell .markdown}
-### Launching the first Container
 
--   **Container** : A container is like a virtual box that holds everything needed to run a computer program. It includes the program itself, along with all the necessary files and settings it needs to work properly. Containers make it easy to move programs from one computer to another without any problems. Containers can be easily created and destroyed which we will see in coming steps
+Next, we'll specify the lease ID. This notebook assumes you already have a "least" for a Raspberry Pi device on CHI@Edge. To get the ID of this lease,
 
--   **Image** : image is a self-contained package that contains all the necessary components to create and run a containerized program. It simplifies the process of sharing and running applications by bundling them into a single image that can be easily distributed and executed on different computers. Here in the below code we used an Image named *python:3.9-slim* which is a light weight version of python and this image will make our container to run any of the python program easily.
+* Vist the CHI@Edge ["reservations" page](https://chi.edge.chameleoncloud.org/project/leases/).
+* Click on the lease name.
+* On the following page, look for the value next to the word "Id" in the "Lease" section.
 
-There are further some of the arguments that has been used in the code like:
+Fill in the lease ID inside the quotation marks in the following cell, then run the cell.
 
--   workdir : it is used to set the working directory of the container.
--   exposed_ports : To expose a given port of the container
--   command : If you want to make sure that whenever the container is built you shuld run a specific command, you can use this.
+
 :::
 
 ::: {.cell .code}
 ``` python
+lease_id ="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+:::
 
-lease_id ="bf826fad-66b5-4eab-b563-8823b7e1d50a"
-print("Creating container ...")
+::: {.cell .markdown}
+
+Now, we are ready to launch a container!
+
+-   **Container** : A container is like a logical "box" that holds everything needed to run an application. It includes the application itself, along with all the necessary prerequisite software, files, and settings it needs to work properly. 
+-   **Image** : An image is like a pre-packaged "starting point" for a container. In this example, we're going to run a machine learning application written in Python, so we will use the `python:3.9-slim` image as a starting point for our container. This is a lightweight installation of the Debian Linux operating system with Python pre-installed.
+
+When we create the container, we could also specify some additional arguments: 
+
+-   `workdir`: the "working directory" - location in the container's filesystem from which any commands we specify will run.
+-   `exposed_ports`: if we run any applications inside the container that need to accept incoming requests from a network, we will need to export a "port" number for those incoming requests. Any requests to that port number will be forwarded to this container.
+-   `command`: if we want to execute a specific command immediately on starting the container, we can specify that as well.
+
+but, we won't need to specify these for this particular experiment.
+
+:::
+
+::: {.cell .markdown}
+
+First, we'll specify the name for our container - we'll include our username and the experiment name in the container name, so that it will be easy to identify our container in the CHI@Edge web interface.
+
+:::
+
+::: {.cell .code}
+``` python
 username = os.environ.get("USER")
-device_name = "iot-rpi-cm4-02"
-# set a name for the container. Becaue CHI@Edge uses Kubernetes, ensure that underscores aren't in the name
-container_name = f"{username}-{device_name}-ml-app".replace("_","-")
+expname = "edge-cpu"
+# set a name for the container
+# Note that underscore characters _ are not allowed - we replace each _ with a -
+container_name = f"{username}-{expname}".replace("_","-")
+```
+:::
 
+::: {.cell .markdown}
+
+Then, we can create the container!
+
+:::
+
+::: {.cell .code}
+``` python
 try:
     my_container = container.create_container(
         container_name,
-        image="python:3.8-slim",
-        command=["python", "-m", "http.server", "8000"],
-        workdir="/var/www/html",
-        exposed_ports=[8000],
+        image="python:3.9-slim",
         reservation_id=lease.get_device_reservation(lease_id),
         platform_version=2,
     )
 except RuntimeError as ex:
     print(ex)
-    print(f"please stop and/or delete {container_name} and try again")
+    print(f"Please stop and/or delete {container_name} and try again")
 else:
     print(f"Successfully created container: {container_name}!")
 ```
+:::
 
-::: {.output .stream .stdout}
-    Creating container ...
-    Successfully created container: cp3793-nyu-edu-iot-rpi-cm4-02-webserver!
+
+::: {.cell .markdown}
+
+Once the container is created, you should be able to see it and monitor its status on the [CHI@Edge web interface](https://chi.edge.chameleoncloud.org/project/container/containers). (If there was any problem while creating the container, you can also forcefully delete the container from the interface, in order to be able to try again.)
+
 :::
-:::
+
 
 ::: {.cell .markdown}
 ### Interacting with the container
