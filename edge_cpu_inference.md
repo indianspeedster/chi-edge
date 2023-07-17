@@ -18,7 +18,7 @@ These edge devices are less powerful and typically lack any special acceleration
 
 ::: {.cell .markdown}
 
-This notebook assumes you already have a "lease" available for a Raspberry Pi device on the CHI@Edge testbed. Then, it will show you how to:
+This notebook assumes you already have a "lease" available for a device on the CHI@Edge testbed. Then, it will show you how to:
 
 * launch a "container" on that device
 * attach an IP address to the container, so that you can access it over SSH
@@ -68,7 +68,7 @@ chi.set("project_name", "CHI-XXXXXX")
 
 ::: {.cell .markdown}
 
-Next, we'll specify the lease ID. This notebook assumes you already have a "least" for a Raspberry Pi device on CHI@Edge. To get the ID of this lease,
+Next, we'll specify the lease ID. This notebook assumes you already have a "lease" for a device on CHI@Edge. To get the ID of this lease,
 
 * Vist the CHI@Edge ["reservations" page](https://chi.edge.chameleoncloud.org/project/leases/).
 * Click on the lease name.
@@ -98,7 +98,9 @@ When we create the container, we could also specify some additional arguments:
 -   `exposed_ports`: if we run any applications inside the container that need to accept incoming requests from a network, we will need to export a "port" number for those incoming requests. Any requests to that port number will be forwarded to this container.
 -   `command`: if we want to execute a specific command immediately on starting the container, we can specify that as well.
 
-For this particular experiment, we'll specify that port 22 - which is used for SSH access - should be exposed.
+For this particular experiment, we'll specify that port 22 - which is used for SSH access - should be exposed. 
+
+Also, since we do not specify a `command` to run, we will further specify `interactive = True` - that it should open an interactive Python session - otherwise the container will immediately stop after it is started, because it has no "work" to do.
 
 :::
 
@@ -131,11 +133,10 @@ try:
         container_name,
         image="python:3.9-slim",
         reservation_id=lease.get_device_reservation(lease_id),
-        exposed_ports=["22"],
+        interactive=True,
+        exposed_ports=[22],
         platform_version=2,
     )
-    # wait until container is ready to use
-    my_container.wait_for_active()
 except RuntimeError as ex:
     print(ex)
     print(f"Please stop and/or delete {container_name} and try again")
@@ -144,10 +145,23 @@ else:
 ```
 :::
 
+::: {.cell .markdown}
+
+The next cell waits for the container to be active - when it is, it will print some output related to the container state.
+:::
+
+::: {.cell .code}
+```python
+# wait until container is ready to use
+container.wait_for_active(my_container.uuid)
+```
+:::
+
+
 
 ::: {.cell .markdown}
 
-Once the container is created, you should be able to see it and monitor its status on the [CHI@Edge web interface](https://chi.edge.chameleoncloud.org/project/container/containers). (If there was any problem while creating the container, you can also forcefully delete the container from the interface, in order to be able to try again.)
+Once the container is created, you should be able to see it and monitor its status on the [CHI@Edge web interface](https://chi.edge.chameleoncloud.org/project/container/containers). (If there was any problem while creating the container, you can also delete the container from that interface, in order to be able to try again.)
 
 :::
 
@@ -166,7 +180,7 @@ First, we'll attach an address:
 
 ::: {.cell .code}
 ``` python
-public_ip = container.associate_floating_ip(my_container.uuid)```
+public_ip = container.associate_floating_ip(my_container.uuid)
 ```
 :::
 
@@ -179,13 +193,48 @@ Then, we need to install an SSH server on the container - it is not pre-installe
 
 ::: {.cell .code}
 ```python
-container.execute(my_container.uuid, 'apt update; apt -y install openssh-server')
+container.execute(my_container.uuid, 'apt update')
+container.execute(my_container.uuid, 'apt -y install openssh-server')
+
 ```
 :::
 
 ::: {.cell .markdown}
 
-There is one more necessary step before we can access the container over SSH - we need to make sure our key is installed on the container. Here, we will install the key from the Jupyter environment.
+There is one more necessary step before we can access the container over SSH - we need to make sure our key is installed on the container. Here, we will upload the key from the Jupyter environment, and make sure it is configured with the appropriate file permissions:
+:::
+
+
+::: {.cell .code}
+```python
+!mkdir -p tmp_keys
+!cp /work/.ssh/id_rsa.pub tmp_keys/authorized_keys
+```
+:::
+
+
+::: {.cell .code}
+```python
+container.execute(my_container.uuid, 'mkdir -p /root/.ssh')
+container.upload(my_container.uuid, "./tmp_keys", "/root/.ssh")
+container.execute(my_container.uuid, 'chown root /root/.ssh')
+container.execute(my_container.uuid, 'chown root /root/.ssh/authorized_keys')
+container.execute(my_container.uuid, 'chmod 600 /root/.ssh/authorized_keys')
+```
+:::
+
+
+::: {.cell .markdown}
+
+Start the SSH server in the container. The following cell should print the output "Starting OpenBSD Secure Shell server: sshd":
+
+:::
+
+
+::: {.cell .code}
+```python
+container.execute(my_container.uuid, 'service ssh start')
+```
 :::
 
 
@@ -202,121 +251,89 @@ print("ssh root@%s" % public_ip)
 ```
 :::
 
-::: {.cell .markdown}
-### Interacting with the container
 
-Just like you ssh into a virtual machine and access that machine, you also can access the container by running terminal commands via container.execute() function.
+::: {.cell .markdown}
+## Transfering files to the container
+
+Later in this notebook, we'll run an image classification model - a model that accepts an image as input and "predicts" the name of the object in the image - inside the container. To do this, we'll need to upload some files to the container:
+
+* an already-trained model
+* a list of labels - this maps the integer values "predicted" by the model to human readable object names
+* a sample image
+* and Python code to load the model and make a prediction on the image
+
+These are all contained in the `ml_model` directory. We can upload them to the container using the `container.upload` function, and specify the source directory (in the Jupyter environment) and destination directory (on the container).
+
+
 :::
 
 ::: {.cell .code}
 ``` python
-cmd = 'echo Hello'
-print(cmd)
-
-print(container.execute(my_container.uuid, cmd)["output"])
+container.execute(my_container.uuid, 'mkdir -p /root/image_model')
+container.upload(my_container.uuid, "./image_model", "/root/image_model")
 ```
-
-::: {.output .stream .stdout}
-    echo Hello
-    Hello
-:::
 :::
 
 
 ::: {.cell .markdown}
-### Transfering files to and from the container
+## Use a pre-trained image classification model to do inference
 
--   To upload files to container we use `container.upload(container_ref: 'str', source: 'str', dest: 'str')` function.
--   to download files from container to our local we use `container.download(container_ref: 'str', source: 'str', dest: 'str')` function.
+Now, we can use the model we uploaded to the container, and do inference - make a prediction - *on* the container. 
+
+
+In this example, we will use a machine learning model that is specifically designed for inference on resource-constrained edge devices. In general, there are several strategies to reduce inference time on edge devices:
+
+* **Model design**: models meant for inference on edge devices are often designed specifically to reduce memory and/or inference time. The model in this example is a MobileNet, which like many image classification models uses a *convolution* operation to process its input, but MobileNets use a kind of convolution that is much faster and requires fewer operations than a "standard" convolution.
+* **Model Compression**: another approach to faster inference on edge devices is model compression, a group of techniques that try to reduce the size of the model without affecting its accuracy. The model in this example is a quantized model, which means that the numeric parameters in the model are represented using fewer bits than in a "standard" model. These quantized parameters can also be processed using faster mathematical operations, potentially improving the inference time.
+* **Hardware Acceleration**: a third popular technique to improving inference time at the edge is with hardware acceleration - using specialized computer chips, GPUs, or TPUs that can perform the operations involved in inference very fast. In this example, though, we are going to use CPU-based inference, which means that there is no hardware acceleration.
+
+
+--- 
+
+> For more information about these strategies, see:
+> J. Chen and X. Ran, "Deep Learning With Edge Computing: A Review," in Proceedings of the IEEE, vol. 107, no. 8, pp. 1655-1674, Aug. 2019, doi: 10.1109/JPROC.2019.2921977. https://ieeexplore.ieee.org/document/8763885 
+
+
 :::
 
-::: {.cell .code}
-``` python
-container.upload(my_container.uuid, "./python_code", "/var/www/html")
-#The code will be uploading some files which we will be going to use for our american sign language classification model
-print("Files uploaded!")
-```
-
-::: {.output .stream .stdout}
-    Files uploaded!
-:::
-:::
 
 ::: {.cell .markdown}
-## Creating an image classification model using tflite
+First, we need to install a couple of Python libraries in the container:
 
-The folder which we previously uploaded contains:
+* `tflite` is a library specifically designed for machine learning inference on edge devices.
+* `Pillow` is used for image processing.
 
--   model.py (The python file which contains all the code to run the model)
--   model.tflite (The tensorflow lite machine learning model for edge devices)
--   image.png (This image which is going to be used to make prediction)
--   Requirments.txt (Requirements file which is used to install all the requirements for our machine learning model)
-:::
-
-::: {.cell .markdown}
-### Installing the required libraries
-
-We will be installing some of the libraries that we are going to need for our ml model.
 :::
 
 ::: {.cell .code}
-``` python
-cmd = "pip install -r requirements.txt"
-print(cmd)
-print(container.execute(my_container.uuid, cmd)["output"])
+```python
+container.execute(my_container.uuid, 'pip install tflite-runtime Pillow')
 ```
-
-::: {.output .stream .stdout}
-    pip install -r requirements.txt
-    Requirement already satisfied: numpy in /usr/local/lib/python3.8/site-packages (from -r requirements.txt (line 1)) (1.24.4)
-    Requirement already satisfied: tflite-runtime in /usr/local/lib/python3.8/site-packages (from -r requirements.txt (line 2)) (2.13.0)
-    Requirement already satisfied: pillow in /usr/local/lib/python3.8/site-packages (from -r requirements.txt (line 3)) (10.0.0)
-:::
-:::
-
-::: {.cell .code}
-``` python
-cmd = "pip list"
-print(cmd)
-print(container.execute(my_container.uuid, cmd)["output"])
-```
-
-::: {.output .stream .stdout}
-    pip list
-    Package        Version
-    -------------- -------
-    numpy          1.24.4
-    Pillow         10.0.0
-    pip            23.0.1
-    setuptools     57.5.0
-    tflite-runtime 2.13.0
-    wheel          0.40.0
-
-    [notice] A new release of pip is available: 23.0.1 -> 23.1.2
-    [notice] To update, run: pip install --upgrade pip
-:::
 :::
 
 ::: {.cell .markdown}
-### Running the model
+
+Then, we can execute the machine learning model!
+
 :::
 
 ::: {.cell .code}
-``` python
-cmd = "python model.py"
-print(cmd)
-print(container.execute(my_container.uuid, cmd)["output"])
+```python
+container.execute(my_container.uuid, 'pip install tflite-runtime Pillow')
 ```
-
-::: {.output .stream .stdout}
-    python model.py
-    0.580392: fig
-    0.568627: Granny Smith
-    0.549020: spaghetti squash
 :::
+
+
+
+::: {.cell .markdown}
+## Delete the container
+
+Finally, we should stop and delete our container so that others can create new containers using the same lease. To delete our container, we can run the following cell:
+
 :::
 
 ::: {.cell .code}
-``` python
+```python
+container.destroy_container(my_container.uuid)
 ```
 :::
