@@ -350,3 +350,17 @@ Finally, we should stop and delete our container so that others can create new c
 container.destroy_container(my_container.uuid)
 ```
 :::
+
+
+::: {.cell .markdown}
+Also free up the IP that you we attached to the container, now that it is no longer in use:
+:::
+
+
+
+::: {.cell .code}
+```python
+ip_details = chi.network.get_floating_ip(reserved_fip)
+chi.neutron().delete_floatingip(ip_details["id"])
+```
+:::
