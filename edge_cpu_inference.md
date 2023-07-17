@@ -98,7 +98,7 @@ When we create the container, we could also specify some additional arguments:
 -   `exposed_ports`: if we run any applications inside the container that need to accept incoming requests from a network, we will need to export a "port" number for those incoming requests. Any requests to that port number will be forwarded to this container.
 -   `command`: if we want to execute a specific command immediately on starting the container, we can specify that as well.
 
-but, we won't need to specify these for this particular experiment.
+For this particular experiment, we'll specify that port 22 - which is used for SSH access - should be exposed.
 
 :::
 
@@ -131,8 +131,11 @@ try:
         container_name,
         image="python:3.9-slim",
         reservation_id=lease.get_device_reservation(lease_id),
+        exposed_ports=["22"],
         platform_version=2,
     )
+    # wait until container is ready to use
+    my_container.wait_for_active()
 except RuntimeError as ex:
     print(ex)
     print(f"Please stop and/or delete {container_name} and try again")
@@ -148,6 +151,56 @@ Once the container is created, you should be able to see it and monitor its stat
 
 :::
 
+::: {.cell .markdown}
+## Attach an address and access your container over SSH
+
+:::
+
+::: {.cell .markdown}
+
+Just as with a conventional "server" on Chameleon, we can attach an address to our container, then use SSH to access its terminal.
+
+First, we'll attach an address:
+
+:::
+
+::: {.cell .code}
+``` python
+public_ip = container.associate_floating_ip(my_container.uuid)```
+```
+:::
+
+::: {.cell .markdown}
+
+Then, we need to install an SSH server on the container - it is not pre-installed on the image we selected.  We can use the `container.execute()` function to run commands inside the container, in order to install the SSH server.
+
+:::
+
+
+::: {.cell .code}
+```python
+container.execute(my_container.uuid, 'apt update; apt -y install openssh-server')
+```
+:::
+
+::: {.cell .markdown}
+
+There is one more necessary step before we can access the container over SSH - we need to make sure our key is installed on the container. Here, we will install the key from the Jupyter environment.
+:::
+
+
+
+::: {.cell .markdown}
+
+Now we can open a terminal in the Jupyter interface to access the container over SSH, using the SSH command that is printed by the following cell:
+
+:::
+
+::: {.cell .code}
+``` python
+print("ssh root@%s" % public_ip)
+```
+:::
 
 ::: {.cell .markdown}
 ### Interacting with the container
@@ -169,23 +222,6 @@ print(container.execute(my_container.uuid, cmd)["output"])
 :::
 :::
 
-::: {.cell .markdown}
-### Attaching a public ip address to the container
-
-When you assign a public IP address, any exposed ports on your container can be reached over the public internet.
-:::
-
-::: {.cell .code}
-``` python
-public_ip = container.associate_floating_ip(my_container.uuid)
-
-print(public_ip)
-```
-
-::: {.output .stream .stdout}
-    129.114.34.182
-:::
-:::
 
 ::: {.cell .markdown}
 ### Transfering files to and from the container
