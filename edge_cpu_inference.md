@@ -195,7 +195,6 @@ Then, we need to install an SSH server on the container - it is not pre-installe
 ```python
 container.execute(my_container.uuid, 'apt update')
 container.execute(my_container.uuid, 'apt -y install openssh-server')
-
 ```
 :::
 
@@ -226,7 +225,7 @@ container.execute(my_container.uuid, 'chmod 600 /root/.ssh/authorized_keys')
 
 ::: {.cell .markdown}
 
-Start the SSH server in the container. The following cell should print the output "Starting OpenBSD Secure Shell server: sshd":
+Start the SSH server in the container. The following cell should print "sshd is running". It it's not running, it can be an indication that the SSH server was not fully installed; wait a minute or two and then try this cell again:
 
 :::
 
@@ -234,6 +233,7 @@ Start the SSH server in the container. The following cell should print the outpu
 ::: {.cell .code}
 ```python
 container.execute(my_container.uuid, 'service ssh start')
+container.execute(my_container.uuid, 'service ssh status')
 ```
 :::
 
@@ -313,17 +313,30 @@ container.execute(my_container.uuid, 'pip install tflite-runtime Pillow')
 
 ::: {.cell .markdown}
 
-Then, we can execute the machine learning model!
+Then, we can execute the machine learning model! We will ask it to make a prediction for the following image:
 
+:::
+
+
+::: {.cell .code}
+```python
+from IPython.display import Image
+Image('image_model/parrot.jpg') 
+```
 :::
 
 ::: {.cell .code}
 ```python
-container.execute(my_container.uuid, 'pip install tflite-runtime Pillow')
+result = container.execute(my_container.uuid, 'python /root/image_model/model.py')
+print(result['output'])
 ```
 :::
 
+::: {.cell .markdown}
 
+Make a note of the time it took to generate the prediction - would this inference time be acceptable for all applications? Also make a note of the model's three best "guesses" regarding the label of the image - is the prediction accurate?
+
+:::
 
 ::: {.cell .markdown}
 ## Delete the container
