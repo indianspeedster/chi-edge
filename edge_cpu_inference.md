@@ -90,7 +90,7 @@ lease_id ="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 Now, we are ready to launch a container!
 
 -   **Container** : A container is like a logical "box" that holds everything needed to run an application. It includes the application itself, along with all the necessary prerequisite software, files, and settings it needs to work properly. 
--   **Image** : An image is like a pre-packaged "starting point" for a container. In this example, we're going to run a machine learning application written in Python, so we will use the `python:3.9-slim` image as a starting point for our container. This is a lightweight installation of the Debian Linux operating system with Python pre-installed.
+-   **Image** : An image is like a pre-packaged "starting point" for a container. On CHI@Edge, we can use any image that is built for the ARM64 architecture - e.g. anything on [this list](https://hub.docker.com/search?type=image&architecture=arm64&q=). In this example, we're going to run a machine learning application written in Python, so we will use the `python:3.9-slim` image as a starting point for our container. This is a lightweight installation of the Debian Linux operating system with Python pre-installed.
 
 When we create the container, we could also specify some additional arguments: 
 
