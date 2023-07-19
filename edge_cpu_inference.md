@@ -262,7 +262,7 @@ Later in this notebook, we'll run an image classification model - a model that a
 * a sample image
 * and Python code to load the model and make a prediction on the image
 
-These are all contained in the `ml_model` directory. We can upload them to the container using the `container.upload` function, and specify the source directory (in the Jupyter environment) and destination directory (on the container).
+These are all contained in the `image_model` directory. We can upload them to the container using the `container.upload` function, and specify the source directory (in the Jupyter environment) and destination directory (on the container).
 
 
 :::
