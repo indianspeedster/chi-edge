@@ -218,6 +218,8 @@ container.execute(my_container.uuid, 'mkdir -p /root/.ssh')
 container.upload(my_container.uuid, "./tmp_keys", "/root/.ssh")
 container.execute(my_container.uuid, 'chown root /root/.ssh')
 container.execute(my_container.uuid, 'chown root /root/.ssh/authorized_keys')
+container.execute(my_container.uuid, 'chmod go-w /root')
+container.execute(my_container.uuid, 'chmod 700 /root/.ssh')
 container.execute(my_container.uuid, 'chmod 600 /root/.ssh/authorized_keys')
 ```
 :::
