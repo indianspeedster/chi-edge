@@ -327,21 +327,9 @@ Image('image_model/parrot.jpg')
 ```
 :::
 
-::: {.cell .markdown}
-
-The next cell will make inference, but before running the cell change 3 things inside container.execute function.
-
-- model_name = change this to the exact name of your model. (eg model.h5)
-- image_name = change this to the name of the image which you are trying to predict, in this case it would be **parrot.jpg**.
-- labelfile_name = change this to the name of the label file which contains the labels for your model and generally is a .txt file.
-
-Also make sure that all the three files are in the image_model folder which you previously transfered to the container
-
-:::
-
 ::: {.cell .code}
 ```python
-result = container.execute(my_container.uuid, 'python /root/image_model/model.py model_path image_name labelfile_name')
+result = container.execute(my_container.uuid, 'python /root/image_model/model.py mobilenet_v2_1.0_224_quantized_1_default_1.tflite parrot.jpg imagenet_labels.txt')
 print(result['output'])
 ```
 :::
