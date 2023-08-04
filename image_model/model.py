@@ -11,7 +11,7 @@ script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 os.chdir(script_directory)
 
 # Set up the model
-def predict(model_path, image_path, labels_path):
+def predict(model_path, labels_path, image_path ):
   interpreter = tflite.Interpreter(model_path=model_path)
   interpreter.allocate_tensors()
 
@@ -47,9 +47,9 @@ def predict(model_path, image_path, labels_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="To parse model name, label file name and image name")
-    parser.add_argument("model_name", type=str, help="Path to the model file.")
-    parser.add_argument("labels_file_name", type=str, help="Path to the labels file.")
-    parser.add_argument("image_name", type=str, help="Path to the image file.")
+    parser.add_argument("model_name", type=str, help="Name of model file.")
+    parser.add_argument("labels_file_name", type=str, help="Name of label file.")
+    parser.add_argument("image_name", type=str, help="Name of image file.")
     
     args = parser.parse_args()
 
