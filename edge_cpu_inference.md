@@ -329,7 +329,7 @@ Image('image_model/parrot.jpg')
 
 ::: {.cell .code}
 ```python
-result = container.execute(my_container.uuid, 'python /root/image_model/model.py')
+result = container.execute(my_container.uuid, 'python /root/image_model/model.py mobilenet_v2_1.0_224_quantized_1_default_1.tflite imagenet_labels.txt parrot.jpg ')
 print(result['output'])
 ```
 :::
