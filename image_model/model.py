@@ -53,9 +53,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    if not args.model or not args.image or not args.label:
-        print("Warning: Must provide: model, label, and image file name.")
-        sys.exit(1)
     prediction, labels = predict(args.model, args.label, args.image)
     for (confidence, idx), label in zip(prediction, labels):
         print('{:08.6f}: {}'.format(float(confidence / 255.0), label))
