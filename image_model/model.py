@@ -23,8 +23,7 @@ def predict(model, label, image ):
   width = input_details[0]['shape'][2]
   img = Image.open(image).resize((width, height))
   img = img.convert('RGB')
-  input_data = np.array(img)
-  input_data = np.expand_dims(img, axis=0)
+  input_data = np.array(img, dtype=input_details[0]['dtype']).reshape(input_details[0]['shape'])
 
   start_time = time.time()
   interpreter.set_tensor(input_details[0]['index'], input_data)
