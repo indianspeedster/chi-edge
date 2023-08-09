@@ -23,8 +23,10 @@ def predict(model, label, image ):
   width = input_details[0]['shape'][2]
   img = Image.open(image).resize((width, height))
   img = img.convert('RGB')
-  input_data = np.array(img, dtype=input_details[0]['dtype']).reshape(input_details[0]['shape'])
-
+  input_data = np.array(img).reshape(input_details[0]['shape'])/255.0 # reshape eliminates needs for expand_dims  
+  if input_details[0]['quantization_parameters']['scales'].size > 0: # if it is quantized, divide by scaling parameter
+    input_data = np.array(input_data/input_details[0]['quantization_parameters']['scales'][0])
+  input_data = np.array(input_data, dtype = input_details[0]['dtype']) # either way, make sure dtype is correct
   start_time = time.time()
   interpreter.set_tensor(input_details[0]['index'], input_data)
 
@@ -41,6 +43,8 @@ def predict(model, label, image ):
 
   sorted_result = sorted((e,i) for i,e in enumerate(output_data[0]))
   prediction = sorted_result[-3:][::-1]
+  if output_details[0]['quantization_parameters']['scales'].size > 0:
+    prediction = [(i*output_details[0]['quantization_parameters']['scales'][0], j) for i,j in prediction]
   predicted_labels = [" ".join(labels[j[1]].split(" ")[1:]) for j in prediction]
   return prediction, predicted_labels
 
@@ -52,6 +56,9 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
+    if not args.model or not args.image or not args.label:
+        print("Warning: Must provide: model, label, and image file name.")
+        sys.exit(1)
     prediction, labels = predict(args.model, args.label, args.image)
     for (confidence, idx), label in zip(prediction, labels):
-        print('{:08.6f}: {}'.format(float(confidence / 255.0), label))
+        print('{:08.6f}: {}'.format(float(confidence), label))
