@@ -1,3 +1,13 @@
+---
+author: 'Deepak Chaurasiya'
+jupyter:
+  kernelspec:
+    display_name: Python 3
+    name: python3
+  nbformat: 4
+  nbformat_minor: 0
+---
+
 ::: {.cell .markdown}
 # Using edge devices for CPU-based inference
 
@@ -53,7 +63,7 @@ import os
 
 ::: {.cell .markdown}
 
-We indicate that we're going to use the CHI@Edge site. We also need to specify the name of the Chameleon "project" that this experiment is part of. The project name will have the format "CHI-XXXXXX", where the last part is a 6-digit number, and you can find it on your [user dashboard](https://chameleoncloud.org/user/dashboard/).
+We indicate that we're going to use the CHI@Edge site. We also need to specify the name of the Chameleon "project" that this experiment is part of. This can be found using the `os.getenv('OS_PROJECT_NAME')`. The project name will have the format "CHI-XXXXXX", where the last part is a 6-digit number. You can also find it on your [user dashboard](https://chameleoncloud.org/user/dashboard/).
 
 In the cell below, replace the project ID with your *own* project ID, then run the cell.
 
@@ -61,8 +71,9 @@ In the cell below, replace the project ID with your *own* project ID, then run t
 
 ::: {.cell .code}
 ``` python
+PROJECT_NAME = os.getenv('OS_PROJECT_NAME') #"CHI-XXXXXX" format; Change this if needed
 chi.use_site("CHI@Edge")
-chi.set("project_name", "CHI-XXXXXX")
+chi.set("project_name", PROJECT_NAME)
 ```
 :::
 
@@ -215,7 +226,7 @@ There is one more necessary step before we can access the container over SSH - w
 ::: {.cell .code}
 ```python
 container.execute(my_container.uuid, 'mkdir -p /root/.ssh')
-container.upload(my_container.uuid, "./tmp_keys", "/root/.ssh")
+container.upload(my_container.uuid, "./tmp_keys/authorized_keys", "/root/.ssh")
 container.execute(my_container.uuid, 'chown root /root/.ssh')
 container.execute(my_container.uuid, 'chown root /root/.ssh/authorized_keys')
 container.execute(my_container.uuid, 'chmod go-w /root')
@@ -264,18 +275,47 @@ Later in this notebook, we'll run an image classification model - a model that a
 * a sample image
 * and Python code to load the model and make a prediction on the image
 
-These are all contained in the `image_model` directory. We can upload them to the container using the `container.upload` function, and specify the source directory (in the Jupyter environment) and destination directory (on the container).
-
-
+We first clone the `image_model` folder of [this](https://github.com/teaching-on-testbeds/edge-cpu-inference.git) git repository to bring the relevant files onto the Chameleon server. Run the following cell to do this
 :::
 
-::: {.cell .code}
+:::{.cell .code}
 ``` python
-container.execute(my_container.uuid, 'mkdir -p /root/image_model')
-container.upload(my_container.uuid, "./image_model", "/root/image_model")
+!git clone https://github.com/teaching-on-testbeds/edge-cpu-inference.git
+!cd 
+!cp -R ./edge-cpu-inference/image_model ./
+!rm -f -R edge-cpu-inference
 ```
 :::
 
+:::{.cell .markdown}
+These are all contained in the `image_model` directory. We can upload them to the container using the `container.upload` function, and specify the source directory (in the Jupyter environment) and destination directory (on the container).
+
+*Make sure to upload this directory even if you choose to test your custom model; This directory contains the inference script.*
+:::
+
+
+::: {.cell .code}
+``` python
+container.upload(my_container.uuid, "./image_model", "/root/")
+container.execute(my_container.uuid, "ls -h /root/image_model/") #Check if all the files under the image_model directory have been uploaded
+```
+:::
+
+:::{.cell .markdown}
+To upload you custom pre-trained model, use the following cell
+:::
+
+:::{.cell .markdown}
+First upload the model to the Chameleon:
+- Click on the folder icon on the left to see your storage, if it isn’t already open. Click on the image_model directory, we will upload our model under this directory. Now click on “Upload”.
+- Wait until all uploads have completed. To check if all the files have been uploaded successfully, check the size of your MODELFILE on the server using the `!ls -a image_model/<MODELFILENAME>`. If the size matches your file size, then proceed.
+:::
+
+:::{.cell .code}
+```python
+container.upload(my_container.uuid, ".image_model/<MODELFILE>", "/root/image_model/") #Replace MODELFILE with the name of your model file
+```
+:::
 
 ::: {.cell .markdown}
 ## Use a pre-trained image classification model to do inference
@@ -325,6 +365,11 @@ Then, we can execute the machine learning model! We will ask it to make a predic
 from IPython.display import Image
 Image('image_model/parrot.jpg') 
 ```
+:::
+
+:::{.cell .markdown}
+We now run inference using the uploaded model. If you would like to run this inference using your custom model, replace the below command with the following:
+`container.execute(my_container.uuid, 'python /root/image_model/model.py --model <MODELFILE_PATH> --label <IMAGELABEL_PATH> --image <TESTIMAGE_PATH>')`
 :::
 
 ::: {.cell .code}
